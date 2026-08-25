@@ -3,9 +3,11 @@
 import { useReducer, useRef, useState } from "react";
 import { CloudUpload, FileAudio, AlertCircle, CheckCircle2 } from "lucide-react";
 import { z } from "zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
 import { Badge } from "@/shared/ui/badge";
+import { api } from "@/shared/lib/api-client";
 
 const ALLOWED_TYPES = ["audio/mpeg", "audio/wav", "audio/mp4", "video/mp4", "video/webm"];
 const MAX_FILE_SIZE = 250 * 1024 * 1024;
@@ -53,12 +55,43 @@ function reducer(state: UploadMachineState, action: UploadAction): UploadMachine
   }
 }
 
+const STATUS_POLL_INTERVAL_MS = 2000;
+const STATUS_POLL_TIMEOUT_MS = 60000;
+
+interface MeetingCreateResponse {
+  id: string;
+}
+
+interface MeetingStatusResponse {
+  status: "uploaded" | "processing" | "transcribing" | "analyzing" | "completed" | "failed";
+}
+
 export function UploadPanel() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [state, dispatch] = useReducer(reducer, initialState);
   const [dragActive, setDragActive] = useState(false);
+  const queryClient = useQueryClient();
 
-  const runUploadFlow = (file: File) => {
+  const pollStatus = async (meetingId: string) => {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < STATUS_POLL_TIMEOUT_MS) {
+      const { data } = await api.get<MeetingStatusResponse>(`/meetings/${meetingId}/status`);
+
+      if (data.status === "completed") {
+        return;
+      }
+      if (data.status === "failed") {
+        throw new Error("Processing failed on the server.");
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, STATUS_POLL_INTERVAL_MS));
+    }
+
+    throw new Error("Processing is taking longer than expected. Check back on the dashboard shortly.");
+  };
+
+  const runUploadFlow = async (file: File) => {
     const validated = uploadFileSchema.safeParse({ file });
     if (!validated.success) {
       dispatch({ type: "error", error: validated.error.issues[0]?.message ?? "Invalid file" });
@@ -67,28 +100,37 @@ export function UploadPanel() {
 
     dispatch({ type: "start", fileName: file.name });
 
-    const progressSteps = [15, 35, 52, 68, 78, 90, 100];
-    let index = 0;
+    try {
+      const meetingResponse = await api.post<MeetingCreateResponse>("/meetings", { title: file.name });
+      const meetingId = meetingResponse.data.id;
 
-    const interval = setInterval(() => {
-      if (index >= progressSteps.length) {
-        clearInterval(interval);
-        dispatch({ type: "processing" });
+      const formData = new FormData();
+      formData.append("file", file);
 
-        setTimeout(() => {
-          dispatch({ type: "success" });
-        }, 600);
-        return;
-      }
+      await api.post(`/meetings/${meetingId}/upload`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        onUploadProgress: (event) => {
+          if (event.total) {
+            const percent = Math.min(85, Math.round((event.loaded / event.total) * 85));
+            dispatch({ type: "progress", value: percent });
+          }
+        },
+      });
 
-      dispatch({ type: "progress", value: progressSteps[index] });
-      index += 1;
-    }, 400);
+      dispatch({ type: "processing" });
+      await pollStatus(meetingId);
+
+      dispatch({ type: "success" });
+      queryClient.invalidateQueries({ queryKey: ["meetings"] });
+    } catch (error) {
+      const detail = (error as { detail?: string })?.detail;
+      dispatch({ type: "error", error: detail ?? "Upload failed. Please try again." });
+    }
   };
 
   const handleFile = (file?: File) => {
     if (!file) return;
-    runUploadFlow(file);
+    void runUploadFlow(file);
   };
 
   const onDrop = (event: React.DragEvent<HTMLDivElement>) => {
