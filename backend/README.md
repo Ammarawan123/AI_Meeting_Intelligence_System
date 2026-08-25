@@ -1,4 +1,4 @@
-# AI Meeting Intelligence — Backend (Member 2)
+# AI Meeting Intelligence — Backend 
 
 FastAPI backend providing authentication, meeting management, file
 upload, and background processing trigger points for the AI Meeting
