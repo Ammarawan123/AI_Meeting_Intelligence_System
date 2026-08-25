@@ -1,11 +1,3 @@
-"""
-Database table definitions.
-
-Meeting.status values match the frontend's expected union type exactly:
-"completed" | "processing" | "failed" (see AI_Meeting_Intelligence
-frontend types/index.ts). Keep these in sync if the frontend changes.
-"""
-
 import uuid
 from datetime import datetime, timezone
 
@@ -40,7 +32,7 @@ class Meeting(Base):
     title = Column(String, default="Untitled Meeting")
     date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     duration_seconds = Column(Integer, default=0)
-    status = Column(String, default="processing")  # uploaded/processing/transcribing/analyzing/completed/failed
+    status = Column(String, default="processing") 
     file_path = Column(String, nullable=True)
     summary = Column(String, default="")
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
