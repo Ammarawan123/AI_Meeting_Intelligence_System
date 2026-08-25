@@ -1,10 +1,3 @@
-"""
-Password hashing and JWT token utilities.
-
-Uses the bcrypt library directly rather than through passlib, since
-passlib's bcrypt backend detection is incompatible with recent bcrypt
-releases (see: passlib issue with bcrypt>=4.1 and __about__ attribute).
-"""
 
 from datetime import datetime, timedelta, timezone
 
@@ -13,8 +6,6 @@ from jose import JWTError, jwt
 
 from app.core.config import settings
 
-# bcrypt has a hard 72-byte input limit; longer passwords are truncated
-# rather than raising, which keeps registration robust against edge cases.
 _MAX_PASSWORD_BYTES = 72
 
 
@@ -29,7 +20,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         password_bytes = plain_password.encode("utf-8")[:_MAX_PASSWORD_BYTES]
         return bcrypt.checkpw(password_bytes, hashed_password.encode("utf-8"))
     except (ValueError, TypeError):
-        # Raised if the stored hash is malformed - treat as invalid login.
+     
         return False
 
 
