@@ -24,8 +24,8 @@ export function LoginPage() {
   } = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "demo@meetingintel.ai",
-      password: "demo123",
+      email: "",
+      password: "",
     },
   });
 
@@ -50,7 +50,7 @@ export function LoginPage() {
           <Input
             label="Email"
             type="email"
-            placeholder="demo@meetingintel.ai"
+            placeholder="you@example.com"
             error={errors.email?.message}
             {...register("email")}
           />
