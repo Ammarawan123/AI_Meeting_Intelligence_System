@@ -7,3 +7,5 @@ sqlalchemy
 email-validator
 psycopg2-binary
 python-dotenv
+faster-whisper==1.2.1
+pyannote.audio

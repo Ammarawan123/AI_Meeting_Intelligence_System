@@ -39,3 +39,22 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+
+# Environment secrets
+.env
+
+# Local database
+*.db
+
+# Local test media
+test.aac
+
+# Generated transcripts
+uploads/transcripts/
