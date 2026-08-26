@@ -1,17 +1,7 @@
-"""
-Request/response schemas.
-
-Field names mirror the frontend's types/index.ts exactly, so the
-frontend can consume these responses with no field-mapping needed.
-"""
-
 from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
-
-
-# ---------- Auth ----------
 
 class RegisterRequest(BaseModel):
     name: str
@@ -38,14 +28,11 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
-
-# ---------- Meetings ----------
-
 class MeetingResponse(BaseModel):
     id: str
     title: str
     date: datetime
-    duration: str  # formatted, e.g. "45:32"
+    duration: str  
     status: Literal["completed", "processing", "failed"]
     participants: list[str] = []
     summary: str = ""
