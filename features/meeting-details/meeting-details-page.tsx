@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, MessageSquareText, Mic, Search, Sparkles, Users, FileText, BrainCircuit } from "lucide-react";
 import { useMeeting } from "@/shared/hooks/useMeeting";
+import { meetingService } from "@/shared/lib/service";
 import { useMeetingStatus } from "@/shared/hooks/useMeetingStatus";
 import { Button } from "@/shared/ui/button";
 import { Card } from "@/shared/ui/card";
@@ -76,7 +77,7 @@ function MeetingDetailsContent({ id }: { id: string }) {
     setActiveTab("transcript");
   };
 
-  const handleChatSubmit = () => {
+  const handleChatSubmit = async () => {
     if (!meeting || !chatInput.trim()) return;
 
     const userMessage: ChatEntry = {
@@ -88,26 +89,36 @@ function MeetingDetailsContent({ id }: { id: string }) {
 
     const lowerQuestion = userMessage.text.toLowerCase();
     let answer = "I found the relevant discussion in the meeting. We can review the transcript and action items for the next step.";
+    let apiAnswer = false;
+    let answerTimestamp = meeting.transcript[0]?.timestamp ?? "00:00";
 
-    if (lowerQuestion.includes("decision") || lowerQuestion.includes("decide")) {
+    try {
+      const response = await meetingService.askQuestion(id, userMessage.text);
+      answer = response.answer;
+      apiAnswer = true;
+      answerTimestamp = response.timestamp ?? answerTimestamp;
+    } catch {
+      apiAnswer = false;
+    }
+
+    if (!apiAnswer && (lowerQuestion.includes("decision") || lowerQuestion.includes("decide"))) {
       answer = `The main decision was: ${meeting.decisions[0]?.summary ?? "No explicit decision captured in this session."}`;
     }
 
-    if (lowerQuestion.includes("action") || lowerQuestion.includes("owner") || lowerQuestion.includes("deadline")) {
+    if (!apiAnswer && (lowerQuestion.includes("action") || lowerQuestion.includes("owner") || lowerQuestion.includes("deadline"))) {
       const nextTask = meeting.actionItems[0];
       answer = `${nextTask?.title ?? "No assigned items"} is owned by ${nextTask?.assignee ?? "the team"} and is due ${nextTask?.dueDate ?? "TBD"}.`;
     }
 
-    if (lowerQuestion.includes("risk") || lowerQuestion.includes("issue") || lowerQuestion.includes("problem")) {
+    if (!apiAnswer && (lowerQuestion.includes("risk") || lowerQuestion.includes("issue") || lowerQuestion.includes("problem"))) {
       answer = meeting.aiInsights?.unresolvedIssues?.[0] ?? "The key unresolved risk is retaining consistent onboarding follow-through across the next review cycle.";
     }
 
-    const assistantTimestamp = meeting.transcript[0]?.timestamp ?? "00:00";
     const assistantMessage: ChatEntry = {
       id: `reply-${Date.now()}`,
       role: "assistant",
       text: answer,
-      timestamp: assistantTimestamp,
+      timestamp: answerTimestamp,
     };
 
     setChatMessages((prev) => [...prev, userMessage, assistantMessage]);
