@@ -47,6 +47,8 @@ JWT_SECRET=replace-with-a-long-random-string
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/meeting_intelligence
 UPLOAD_DIR=./uploads
 MAX_UPLOAD_SIZE_MB=500
+OPENAI_API_KEY=your-api-key
+OPENAI_MODEL=gpt-4o-mini
 ```
 
 Replace `YOUR_PASSWORD` with the password you set during PostgreSQL
@@ -58,7 +60,7 @@ installation. `.env` is gitignored — never commit it.
 uvicorn app.main:app --reload --port 3001
 ```
 
-On startup, SQLAlchemy creates all tables (`users`, `meetings`) in the
+On startup, SQLAlchemy creates all Member 5 tables in the
 configured Postgres database automatically. No manual migration step
 exists yet — see **Known Limitations** below.
 
@@ -77,10 +79,25 @@ Interactive API docs: `http://localhost:3001/docs`
 | DELETE | `/api/meetings/{id}` | Delete a meeting |
 | POST | `/api/meetings/{id}/upload` | Upload an audio/video file, triggers background processing |
 | GET | `/api/meetings/{id}/status` | Poll processing status |
+| GET | `/api/meetings/{id}/transcript` | Get timestamped speaker transcript |
+| GET | `/api/meetings/{id}/analysis` | Get structured AI meeting analysis |
+| POST | `/api/meetings/{id}/qa` | Ask a question using only this meeting |
+| GET | `/api/search?query=marketing` | Search owned meetings and indexed content |
 
-Endpoints for transcript, insights, decisions, deadlines, Q&A, and
-search belong to Members 3, 4, and 5 respectively and are not part of
-this backend.
+The analysis endpoint returns the title, executive and detailed summaries,
+key points, timestamped decisions, action items with normalized deadlines,
+unresolved issues, follow-ups, and sentiment. The LLM stage uses the meeting
+date when converting relative deadlines. Without `OPENAI_API_KEY`, local runs
+store a minimal fallback report instead of failing after transcription.
+
+Member 5 stores transcript segments, embeddings, extracted records, and AI
+conversation history in the database. PostgreSQL uses `pgvector`; SQLite uses
+JSON embeddings with the same meeting-scoped retrieval fallback for local runs.
+
+Member 5 indexing stores transcript chunks and embeddings in PostgreSQL. When
+PostgreSQL and `pgvector` are configured, the embedding column uses `vector(384)`;
+the default SQLite development database uses JSON embeddings with the same
+meeting-scoped cosine retrieval behavior.
 
 ## What Is Actually Verified
 
@@ -149,6 +166,7 @@ backend/
 │   │   ├── auth.py       # register, login, me
 │   │   ├── meetings.py   # CRUD
 │   │   ├── upload.py     # file upload + validation + background trigger
+│   │   ├── analysis.py   # structured AI analysis retrieval
 │   │   └── status.py     # processing status
 │   ├── core/
 │   │   ├── config.py     # env var loading (python-dotenv)
@@ -160,7 +178,8 @@ backend/
 │   ├── schemas/
 │   │   └── schemas.py     # Pydantic request/response models
 │   └── services/
-│       └── processing.py  # background pipeline entry point + ffprobe duration
+│       ├── analysis.py   # LLM prompt and structured response parsing
+│       └── processing.py # background pipeline entry point + ffprobe duration
 ├── requirements.txt
 ├── .env.example
 └── README.md               # this file
