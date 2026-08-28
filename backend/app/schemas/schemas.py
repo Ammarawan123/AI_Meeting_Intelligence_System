@@ -48,3 +48,37 @@ class MeetingStatusResponse(BaseModel):
 
 class CreateMeetingRequest(BaseModel):
     title: str = "Untitled Meeting"
+
+
+class KeyPoint(BaseModel):
+    title: str
+    content: str
+    timestamp: str | None
+
+
+class DecisionInsight(BaseModel):
+    decision: str
+    timestamp: str | None
+
+
+class ActionItemInsight(BaseModel):
+    task: str
+    owner: str | None
+    deadline: str | None
+    timestamp: str | None
+
+
+class MeetingAnalysis(BaseModel):
+    meeting_title: str
+    executive_summary: str
+    detailed_summary: str
+    key_points: list[KeyPoint]
+    decisions: list[DecisionInsight]
+    action_items: list[ActionItemInsight]
+    unresolved_issues: list[str]
+    follow_ups: list[str]
+    sentiment: Literal["positive", "neutral", "negative", "mixed"]
+    sentiment_confidence: float = Field(ge=0, le=1)
+
+    class Config:
+        from_attributes = True
