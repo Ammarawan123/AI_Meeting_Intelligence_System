@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.database import Base, engine
-from app.api import auth, meetings, upload, status, transcript
+from app.api import analysis, auth, meetings, upload, status, transcript
 
 app = FastAPI(title="AI Meeting Intelligence API")
 
@@ -21,6 +21,7 @@ app.include_router(meetings.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
 app.include_router(status.router, prefix="/api")
 app.include_router(transcript.router, prefix="/api")
+app.include_router(analysis.router, prefix="/api")
 
 
 @app.on_event("startup")
