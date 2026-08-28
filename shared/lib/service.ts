@@ -28,6 +28,11 @@ interface AnalysisApiResponse {
   sentiment: MeetingAiSummary["sentiment"];
 }
 
+type TranscriptApiSegment = TranscriptResponse["segments"][number];
+type KeyPointApiItem = AnalysisApiResponse["key_points"][number];
+type DecisionApiItem = AnalysisApiResponse["decisions"][number];
+type ActionItemApiItem = AnalysisApiResponse["action_items"][number];
+
 const formatTimestamp = (seconds: number) => {
   const minutes = Math.floor(seconds / 60).toString().padStart(2, "0");
   const remainder = Math.floor(seconds % 60).toString().padStart(2, "0");
@@ -60,29 +65,29 @@ export const meetingService = {
       api.get<AnalysisApiResponse>(`/meetings/${id}/analysis`).catch(() => null),
     ]);
     const meeting = toMeeting(response.data);
-    meeting.transcript = transcriptResponse.data.segments.map((segment, index) => ({
+    meeting.transcript = transcriptResponse.data.segments.map((segment: TranscriptApiSegment, index: number) => ({
       id: `${id}-segment-${index}`,
       speaker: segment.speaker,
       timestamp: formatTimestamp(segment.start_time),
       text: segment.text,
     }));
-    meeting.participants = [...new Set(meeting.transcript.map((segment) => segment.speaker))];
+    meeting.participants = [...new Set(meeting.transcript.map((segment: Meeting["transcript"][number]) => segment.speaker))];
 
     if (analysisResponse) {
       const analysis = analysisResponse.data;
       meeting.aiInsights = {
-        keyPoints: analysis.key_points.map((point, index) => ({
+        keyPoints: analysis.key_points.map((point: KeyPointApiItem, index: number) => ({
           id: `${id}-point-${index}`,
           title: point.title,
           content: point.content,
         })),
-        decisions: analysis.decisions.map((decision, index) => ({
+        decisions: analysis.decisions.map((decision: DecisionApiItem, index: number) => ({
           id: `${id}-decision-${index}`,
           summary: decision.decision,
           owner: "Meeting decision",
           status: "approved",
         })),
-        actionItems: analysis.action_items.map((item, index) => ({
+        actionItems: analysis.action_items.map((item: ActionItemApiItem, index: number) => ({
           id: `${id}-action-${index}`,
           title: item.task,
           assignee: item.owner ?? "Unassigned",
@@ -99,6 +104,11 @@ export const meetingService = {
     }
 
     return meeting;
+  },
+
+  async askQuestion(id: string, question: string): Promise<{ answer: string; timestamp: string | null }> {
+    const response = await api.post<{ answer: string; timestamp: string | null }>(`/meetings/${id}/qa`, { question });
+    return response.data;
   },
 };
 
