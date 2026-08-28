@@ -14,6 +14,9 @@ class Settings:
     upload_dir: str
     max_upload_size_mb: int
     allowed_audio_video_extensions: tuple[str, ...]
+    openai_api_key: str | None
+    openai_model: str
+    openai_base_url: str
 
 
 def load_settings() -> Settings:
@@ -32,6 +35,9 @@ def load_settings() -> Settings:
         allowed_audio_video_extensions=(
             ".mp3", ".wav", ".m4a", ".mp4", ".mov", ".webm",
         ),
+        openai_api_key=os.environ.get("OPENAI_API_KEY"),
+        openai_model=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"),
+        openai_base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
     )
 
 
