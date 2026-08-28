@@ -9,6 +9,8 @@ from app.models.models import Meeting
 from app.services.transcription.pipeline import process_recording
 from app.services.transcription.formatter import format_transcript
 from app.services.transcription.transcript_store import save_transcript
+from app.services.analysis import analyze_meeting
+from app.services.transcription.analysis_store import save_analysis
 
 
 logger = logging.getLogger(__name__)
@@ -80,9 +82,13 @@ def run_processing_pipeline(meeting_id: str, file_path: str) -> None:
                 transcript,
             )
 
-            # Member 3 is finished.
-            # Member 4 can now perform AI analysis.
+            analysis = analyze_meeting(transcript, meeting.date.date())
+            save_analysis(str(meeting_id), analysis)
+            meeting.title = analysis.meeting_title
+            meeting.summary = analysis.executive_summary
             meeting.status = "analyzing"
+            db.commit()
+            meeting.status = "completed"
             db.commit()
 
         except Exception:
