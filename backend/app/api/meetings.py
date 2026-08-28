@@ -33,7 +33,7 @@ def to_response(meeting: Meeting) -> MeetingResponse:
         date=meeting.date,
         duration=format_duration(meeting.duration_seconds),
         status=public_status,
-        participants=[],
+        participants=[participant.name for participant in meeting.participants],
         summary=meeting.summary or "",
     )
 
