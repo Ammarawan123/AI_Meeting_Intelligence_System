@@ -82,3 +82,13 @@ class MeetingAnalysis(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class MeetingQuestionRequest(BaseModel):
+    question: str = Field(min_length=2, max_length=2000)
+
+
+class MeetingQuestionResponse(BaseModel):
+    answer: str
+    timestamp: str | None = None
+    conversation_id: str
