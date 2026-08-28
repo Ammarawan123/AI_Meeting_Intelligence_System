@@ -31,7 +31,19 @@ def get_transcript(
             detail="Meeting not found.",
         )
 
-    transcript = load_transcript(meeting_id)
+    if meeting.transcript is not None:
+        transcript = [
+            {
+                "meeting_id": meeting_id,
+                "speaker": segment.speaker,
+                "start_time": segment.start_time,
+                "end_time": segment.end_time,
+                "text": segment.text,
+            }
+            for segment in sorted(meeting.transcript.segments, key=lambda item: item.start_time)
+        ]
+    else:
+        transcript = load_transcript(meeting_id)
 
     return {
         "meeting_id": meeting_id,
